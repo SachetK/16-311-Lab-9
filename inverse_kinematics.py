@@ -149,11 +149,6 @@ class Robot:
         self.move_arm2(target_angle2, dt, arm2)
         self.update_position()
 
-def read_angle_sequence(filename):
-    with open(filename, 'r') as f:
-        return [(math.radians(float(a1)), math.radians(float(a2)))
-                for a1, a2 in (line.strip().split() for line in f)]
-
 def main():
     plink = Plink()
     arm1 = Motor(plink.channel3, gear_ratio=GEAR_RATIO)
@@ -164,7 +159,7 @@ def main():
     plink.connect()
 
     robot = Robot()
-    angle_sequence = read_angle_sequence('angles.txt')
+    filename = 'angles.txt'
 
     arm1.reset_encoder()
     arm2.reset_encoder()
@@ -174,9 +169,23 @@ def main():
 #            print(f"Arm 1 pos: {math.degrees(arm1.position):.1f}, Arm 2 pos: {-math.degrees(arm2.position):.1f}")
 #            time.sleep(0.02)
 
-        for a1, a2 in angle_sequence:
-            robot.go_to_pose(a1, a2, 0.02, arm1, arm2)
-            print(f"Moved to ({math.degrees(arm1.position):.1f}°, {math.degrees(arm2.position):.1f}°) → Position: ({robot.x:.2f}, {robot.y:.2f})")
+        with open(filename, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue  # skip empty lines
+
+                if line.upper() == "WAIT":
+                    print("⏸ WAITING...")
+                    time.sleep(3.0)
+                    continue
+
+                theta1_deg, theta2_deg = map(float, line.split())
+                a1 = math.radians(theta1_deg)
+                a2 = math.radians(theta2_deg)
+                robot.go_to_pose(a1, a2, 0.02, arm1, arm2)
+                
+                print(f"Moved to ({math.degrees(arm1.position):.1f}°, {math.degrees(arm2.position):.1f}°) → Position: ({robot.x:.2f}, {robot.y:.2f})")
 
     except KeyboardInterrupt:
         print("Stopped by user.")
